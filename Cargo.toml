@@ -1,6 +1,11 @@
 [package]
 name = "rprox"
 version = "0.1.0"
+license-file = "LICENSE"
+readme = "README.md"
+description = "A basic Rust reverse proxy"
+documentation = "https://docs.rs/rprox"
+repository = "https://github.com/nyxkrage/rprox"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
