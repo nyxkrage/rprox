@@ -47,7 +47,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This is a basic reverse proxy, with hotreloading\*, abiltiy to write middleware in Golang\*
+This is a basic reverse proxy, with hotreloading, and the abiltiy to write middleware in Golang\*
 
 \*Not yet implemented
 
@@ -71,23 +71,21 @@ This is a basic reverse proxy, with hotreloading\*, abiltiy to write middleware 
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* Rust
-Install with [rustup](https://rustup.rs/)
+* Rust - Install with [rustup](https://rustup.rs/)
 
 ### Installation
 
 1. Clone the repo
-   ```sh
-   git clone https://github.com/nyxkrage/rprox.git
+   ```console
+   $ git clone https://github.com/nyxkrage/rprox.git
    ```
 1. Build with Cargo
-   ```sh
-   cargo build
+   ```console
+   $ cargo build
    ```
 1. Run the project
-   ```js
-   cargo run
+   ```console
+   $ cargo run
    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -109,7 +107,8 @@ See [test.yaml](./test.yaml) for an example configuration
 - [x] HTTP proxying  
 - [ ] HTTPS with Rustls
 - [ ] Middleware with Goscript
-- [ ] hotreloading of config file
+- [ ] CLI Argument parsing
+- [x] hotreloading of config file
 
 See the [open issues](https://github.com/nyxkrage/rprox/issues) for a full list of proposed features (and known issues).
 
