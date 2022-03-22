@@ -105,33 +105,25 @@ fn load_proxy_map<'a, P: AsRef<Path>>(path: P) -> ProxyMap {
 
 use tokio::sync::{broadcast, mpsc};
 
-async fn start_proxy(addr: SocketAddr, mut shutdown: broadcast::Receiver<()>) {
+async fn start_proxy(addr: SocketAddr, mut shutdown: broadcast::Receiver<()>, _finished: mpsc::Sender<()>) {
     let make_svc = make_service_fn(|_conn| async {
         Ok::<_, hyper::Error>(service_fn(|req| async move {
             set_proxy_headers(proxy(req).await.unwrap())
         }))
     });
 
-    let server = Server::bind(&addr).serve(make_svc);
+    let server = Server::bind(&addr).serve(make_svc).with_graceful_shutdown(async {
+        shutdown.recv().await.ok();
+    });
 
-    tokio::select! {
-        _ = shutdown.recv() => {
-            return
-        }
-        r = server  => {
-            match r {
-                Ok(_) => (),
-                Err(e) => {
-                    eprintln!("ERR: Server failed: {}", e)
-                },
-            }
-        }
-    }
+    if let Err(e) = server.await {
+        eprintln!("ERR: Server failed: {}", e);
+    };
 }
 
 use notify::Watcher;
 
-async fn start_watchdog<P: AsRef<Path>>(path: P, mut shutdown: broadcast::Receiver<()>) {
+async fn start_watchdog<P: AsRef<Path>>(path: P, mut shutdown: broadcast::Receiver<()>, _finished: mpsc::Sender<()>) {
     let (tx, mut rx) = mpsc::channel(100);
     let mut watcher = notify::RecommendedWatcher::new(move |result: Result<notify::Event, notify::Error>| {
         tx.blocking_send(result).expect("couldnt send");
@@ -153,12 +145,13 @@ async fn start_watchdog<P: AsRef<Path>>(path: P, mut shutdown: broadcast::Receiv
                 }
             }
             _ = shutdown.recv() => {
-                return
+                break;
             }
         }
-    }
-}
+    };
 
+    
+}
 
 #[tokio::main]
 async fn main() {
@@ -177,24 +170,28 @@ async fn main() {
         8000
     };
 
-    let (shutdown_send, proxy_shutdown) = broadcast::channel(1);
-    let watchdog_shutdown = shutdown_send.subscribe();
+    let (task_shutdown, proxy_shutdown) = broadcast::channel(1);
+    let watchdog_shutdown = task_shutdown.subscribe();
+    let (proxy_finished, mut shutdown_recv) = mpsc::channel(1);
+    let watchdog_finished = proxy_finished.clone();
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
     tokio::spawn(async move {
-        start_proxy(addr, proxy_shutdown).await;
+        start_proxy(addr, proxy_shutdown, proxy_finished).await;
     });
     tokio::spawn(async move {
-        start_watchdog("test.yaml", watchdog_shutdown).await;
+        start_watchdog("test.yaml", watchdog_shutdown, watchdog_finished).await;
     });
 
     match tokio::signal::ctrl_c().await {
         Ok(()) => {
-            shutdown_send.send(())
+            task_shutdown.send(())
         },
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
-            shutdown_send.send(())
+            task_shutdown.send(())
         },
     }.unwrap();
+
+    let _ = shutdown_recv.recv().await;
 }
